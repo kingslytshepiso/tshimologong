@@ -1,103 +1,226 @@
-import Image from "next/image";
+"use client";
+import React, { useState } from "react";
+import { createSurvey, Rating } from "./surveyService";
+
+const likertOptions: { label: string; value: Rating }[] = [
+  { label: "Strongly Agree", value: "StronglyAgree" },
+  { label: "Agree", value: "Agree" },
+  { label: "Neutral", value: "Neutral" },
+  { label: "Disagree", value: "Disagree" },
+  { label: "Strongly Disagree", value: "StronglyDisagree" },
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [favoriteFood, setFavoriteFood] = useState<string[]>([]);
+  const likertStatements = [
+    "I like to watch movies",
+    "I like to listen to radio",
+    "I like to eat out",
+    "I like to watch  TV",
+  ];
+  const [ratings, setRatings] = useState<Record<string, Rating>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const foodOptions = ["Pizza", "Pasta", "Pap and Wors", "Other"];
+
+  const handleFoodChange = (food: string) => {
+    setFavoriteFood((prev) =>
+      prev.includes(food) ? prev.filter((f) => f !== food) : [...prev, food]
+    );
+  };
+
+  const handleLikertChange = (statement: string, value: Rating) => {
+    setRatings((prev) => ({ ...prev, [statement]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setSuccess(false);
+    try {
+      await createSurvey({
+        fullName,
+        email,
+        dateOfBirth,
+        contactNumber,
+        favoriteFood,
+        ratings,
+      });
+      setSuccess(true);
+      setFullName("");
+      setEmail("");
+      setDateOfBirth("");
+      setContactNumber("");
+      setFavoriteFood([]);
+      setRatings({});
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Submission failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        maxWidth: 700,
+        margin: "40px auto",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <h1 style={{ textAlign: "center" }}>Tshimologong Digital Assessment</h1>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          background: "#fff",
+          padding: 24,
+          borderRadius: 8,
+          boxShadow: "0 2px 8px #eee",
+        }}
+      >
+        <div style={{ display: "flex", marginBottom: 16 }}>
+          <label
+            style={{ width: 140, marginRight: 8, alignSelf: "flex-start" }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Personal Details :
+          </label>
+          <div style={{ flex: 1 }}>
+            <div style={{ marginBottom: 8 }}>
+              <input
+                type="text"
+                placeholder="Full Names"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                style={{ width: "100%", padding: 6, marginBottom: 8 }}
+              />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ width: "100%", padding: 6, marginBottom: 8 }}
+              />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <input
+                type="date"
+                placeholder="Date of Birth"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                style={{ width: "100%", padding: 6, marginBottom: 8 }}
+              />
+            </div>
+            <div>
+              <input
+                type="text"
+                placeholder="Contact Number"
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value)}
+                style={{ width: "100%", padding: 6 }}
+              />
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8 }}>What is your favorite food?</div>
+          {foodOptions.map((food) => (
+            <label key={food} style={{ marginRight: 16 }}>
+              <input
+                type="checkbox"
+                checked={favoriteFood.includes(food)}
+                onChange={() => handleFoodChange(food)}
+              />
+              {food}
+            </label>
+          ))}
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            Please rate your level of agreement on a scale from 1 to 5, with 1
+            being &quot;strongly agree&quot; and 5 being &quot;strongly
+            disagree.&quot;
+          </div>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginBottom: 16,
+            }}
+          >
+            <thead>
+              <tr style={{ background: "#f5f5f5" }}>
+                <th style={{ border: "1px solid #ccc", padding: 6 }}></th>
+                {likertOptions.map((opt) => (
+                  <th
+                    key={opt.value}
+                    style={{ border: "1px solid #ccc", padding: 6 }}
+                  >
+                    {opt.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {likertStatements.map((statement, idx) => (
+                <tr key={idx}>
+                  <td style={{ border: "1px solid #ccc", padding: 6 }}>
+                    {statement}
+                  </td>
+                  {likertOptions.map((opt) => (
+                    <td
+                      key={opt.value}
+                      style={{ border: "1px solid #ccc", textAlign: "center" }}
+                    >
+                      <input
+                        type="radio"
+                        name={`likert-${idx}`}
+                        value={opt.value}
+                        checked={ratings[statement] === opt.value}
+                        onChange={() =>
+                          handleLikertChange(statement, opt.value)
+                        }
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {error && <div style={{ color: "red", marginBottom: 8 }}>{error}</div>}
+        {success && (
+          <div style={{ color: "green", marginBottom: 8 }}>
+            Survey submitted successfully!
+          </div>
+        )}
+        <div style={{ textAlign: "center" }}>
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{
+              background: "#4da3ff",
+              color: "#fff",
+              border: "none",
+              padding: "10px 32px",
+              borderRadius: 4,
+              fontWeight: 600,
+              fontSize: 16,
+              cursor: submitting ? "not-allowed" : "pointer",
+            }}
+          >
+            {submitting ? "Submitting..." : "SUBMIT"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
