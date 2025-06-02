@@ -1,5 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import { yupResolver } from "@hookform/resolvers/yup";
+import React from "react";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
 import { createSurvey, Rating } from "./surveyService";
 
 const likertOptions: { label: string; value: Rating }[] = [
@@ -10,62 +13,86 @@ const likertOptions: { label: string; value: Rating }[] = [
   { label: "Strongly Disagree", value: "StronglyDisagree" },
 ];
 
+const foodOptions = ["Pizza", "Pasta", "Pap and Wors", "Other"];
+const likertStatements = [
+  "I like to watch movies",
+  "I like to listen to radio",
+  "I like to eat out",
+  "I like to watch  TV",
+];
+
+const schema = yup.object({
+  fullName: yup.string().required("Full Name is required"),
+  email: yup.string().email("Invalid email").required("Email is required"),
+  dateOfBirth: yup.string().required("Date of Birth is required"),
+  contactNumber: yup.string().required("Contact Number is required"),
+  favoriteFood: yup
+    .array()
+    .of(yup.string().required())
+    .min(1, "Select at least one food")
+    .required(),
+  ratings: yup
+    .object()
+    .test(
+      "all-rated",
+      "Please rate all statements",
+      (value: Record<string, Rating> | undefined) =>
+        value &&
+        likertStatements.every(
+          (statement) => value[statement] && value[statement].length > 0
+        )
+    )
+    .required(),
+});
+
+type FormData = {
+  fullName: string;
+  email: string;
+  dateOfBirth: string;
+  contactNumber: string;
+  favoriteFood: string[];
+  ratings: Record<string, Rating>;
+};
+
 export default function Home() {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
-  const [favoriteFood, setFavoriteFood] = useState<string[]>([]);
-  const likertStatements = [
-    "I like to watch movies",
-    "I like to listen to radio",
-    "I like to eat out",
-    "I like to watch  TV",
-  ];
-  const [ratings, setRatings] = useState<Record<string, Rating>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<FormData>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      dateOfBirth: "",
+      contactNumber: "",
+      favoriteFood: [],
+      ratings: {},
+    },
+  });
+  const [error, setError] = React.useState("");
+  const [success, setSuccess] = React.useState(false);
 
-  const foodOptions = ["Pizza", "Pasta", "Pap and Wors", "Other"];
-
-  const handleFoodChange = (food: string) => {
-    setFavoriteFood((prev) =>
-      prev.includes(food) ? prev.filter((f) => f !== food) : [...prev, food]
-    );
-  };
-
-  const handleLikertChange = (statement: string, value: Rating) => {
-    setRatings((prev) => ({ ...prev, [statement]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const onSubmit = async (data: FormData) => {
     setError("");
     setSuccess(false);
     try {
-      await createSurvey({
-        fullName,
-        email,
-        dateOfBirth,
-        contactNumber,
-        favoriteFood,
-        ratings,
-      });
+      await createSurvey(data);
       setSuccess(true);
-      setFullName("");
-      setEmail("");
-      setDateOfBirth("");
-      setContactNumber("");
-      setFavoriteFood([]);
-      setRatings({});
+      reset();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Submission failed");
-    } finally {
-      setSubmitting(false);
     }
   };
+
+  // For checkboxes
+  const favoriteFood = watch("favoriteFood");
+  // For ratings
+  const ratings = watch("ratings");
 
   return (
     <div
@@ -77,56 +104,99 @@ export default function Home() {
     >
       <h1 style={{ textAlign: "center" }}>Tshimologong Digital Assessment</h1>
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         style={{
           background: "#fff",
           padding: 24,
           borderRadius: 8,
           boxShadow: "0 2px 8px #eee",
         }}
+        noValidate
       >
         <div style={{ display: "flex", marginBottom: 16 }}>
-          <label
-            style={{ width: 140, marginRight: 8, alignSelf: "flex-start" }}
-          >
-            Personal Details :
-          </label>
+          <div style={{ width: 140, marginRight: 8, alignSelf: "flex-start" }}>
+            <span style={{ fontWeight: 600 }}>Personal Details :</span>
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ marginBottom: 8 }}>
+              <label
+                htmlFor="fullName"
+                style={{ display: "block", marginBottom: 2 }}
+              >
+                Full Names:
+              </label>
               <input
+                id="fullName"
                 type="text"
                 placeholder="Full Names"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                style={{ width: "100%", padding: 6, marginBottom: 8 }}
+                {...register("fullName")}
+                style={{ width: "100%", padding: 6, marginBottom: 2 }}
               />
+              {errors.fullName && (
+                <div style={{ color: "red" }}>
+                  {String(errors.fullName.message)}
+                </div>
+              )}
             </div>
             <div style={{ marginBottom: 8 }}>
+              <label
+                htmlFor="email"
+                style={{ display: "block", marginBottom: 2 }}
+              >
+                Email:
+              </label>
               <input
+                id="email"
                 type="email"
                 placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ width: "100%", padding: 6, marginBottom: 8 }}
+                {...register("email")}
+                style={{ width: "100%", padding: 6, marginBottom: 2 }}
               />
+              {errors.email && (
+                <div style={{ color: "red" }}>
+                  {String(errors.email.message)}
+                </div>
+              )}
             </div>
             <div style={{ marginBottom: 8 }}>
+              <label
+                htmlFor="dateOfBirth"
+                style={{ display: "block", marginBottom: 2 }}
+              >
+                Date of Birth:
+              </label>
               <input
+                id="dateOfBirth"
                 type="date"
                 placeholder="Date of Birth"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                style={{ width: "100%", padding: 6, marginBottom: 8 }}
+                {...register("dateOfBirth")}
+                style={{ width: "100%", padding: 6, marginBottom: 2 }}
               />
+              {errors.dateOfBirth && (
+                <div style={{ color: "red" }}>
+                  {String(errors.dateOfBirth.message)}
+                </div>
+              )}
             </div>
             <div>
+              <label
+                htmlFor="contactNumber"
+                style={{ display: "block", marginBottom: 2 }}
+              >
+                Contact Number:
+              </label>
               <input
+                id="contactNumber"
                 type="text"
                 placeholder="Contact Number"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
-                style={{ width: "100%", padding: 6 }}
+                {...register("contactNumber")}
+                style={{ width: "100%", padding: 6, marginBottom: 2 }}
               />
+              {errors.contactNumber && (
+                <div style={{ color: "red" }}>
+                  {String(errors.contactNumber.message)}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -136,12 +206,28 @@ export default function Home() {
             <label key={food} style={{ marginRight: 16 }}>
               <input
                 type="checkbox"
-                checked={favoriteFood.includes(food)}
-                onChange={() => handleFoodChange(food)}
+                value={food}
+                checked={favoriteFood?.includes(food)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  if (checked) {
+                    setValue("favoriteFood", [...(favoriteFood || []), food]);
+                  } else {
+                    setValue(
+                      "favoriteFood",
+                      (favoriteFood || []).filter((f: string) => f !== food)
+                    );
+                  }
+                }}
               />
               {food}
             </label>
           ))}
+          {errors.favoriteFood && (
+            <div style={{ color: "red" }}>
+              {String(errors.favoriteFood.message)}
+            </div>
+          )}
         </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ marginBottom: 8 }}>
@@ -184,10 +270,12 @@ export default function Home() {
                         type="radio"
                         name={`likert-${idx}`}
                         value={opt.value}
-                        checked={ratings[statement] === opt.value}
-                        onChange={() =>
-                          handleLikertChange(statement, opt.value)
-                        }
+                        checked={ratings?.[statement] === opt.value}
+                        onChange={() => {
+                          setValue(`ratings.${statement}`, opt.value, {
+                            shouldValidate: true,
+                          });
+                        }}
                       />
                     </td>
                   ))}
@@ -195,6 +283,9 @@ export default function Home() {
               ))}
             </tbody>
           </table>
+          {errors.ratings && (
+            <div style={{ color: "red" }}>{String(errors.ratings.message)}</div>
+          )}
         </div>
         {error && <div style={{ color: "red", marginBottom: 8 }}>{error}</div>}
         {success && (
@@ -205,7 +296,7 @@ export default function Home() {
         <div style={{ textAlign: "center" }}>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={isSubmitting}
             style={{
               background: "#4da3ff",
               color: "#fff",
@@ -214,10 +305,10 @@ export default function Home() {
               borderRadius: 4,
               fontWeight: 600,
               fontSize: 16,
-              cursor: submitting ? "not-allowed" : "pointer",
+              cursor: isSubmitting ? "not-allowed" : "pointer",
             }}
           >
-            {submitting ? "Submitting..." : "SUBMIT"}
+            {isSubmitting ? "Submitting..." : "SUBMIT"}
           </button>
         </div>
       </form>
