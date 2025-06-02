@@ -12,14 +12,6 @@ function calculateAge(dateString: string) {
   }
   return age;
 }
-
-const foodOptions = ["Pizza", "Pasta", "Pap and Wors"];
-const likertStatements = [
-  "I like to watch movies",
-  "I like to listen to radio",
-  "I like to eat out",
-  "I like to watch  TV",
-];
 const ratingToNumber = {
   StronglyAgree: 5,
   Agree: 4,
@@ -40,7 +32,6 @@ export default function Results() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Aggregation logic
   const total = surveys.length;
   const ages = surveys
     .map((s) => (s.dateOfBirth ? calculateAge(s.dateOfBirth) : null))
@@ -57,7 +48,6 @@ export default function Results() {
     return ((count / total) * 100).toFixed(1) + "%";
   };
 
-  // Average rating per statement
   function averageRating(statement: string) {
     const ratings = surveys
       .map((s) => s.ratings?.[statement])

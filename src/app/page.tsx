@@ -24,7 +24,20 @@ const likertStatements = [
 const schema = yup.object({
   fullName: yup.string().required("Full Name is required"),
   email: yup.string().email("Invalid email").required("Email is required"),
-  dateOfBirth: yup.string().required("Date of Birth is required"),
+  dateOfBirth: yup
+    .string()
+    .required("Date of Birth is required")
+    .test("age-range", "Age must be between 5 and 120 years", (value) => {
+      if (!value) return false;
+      const today = new Date();
+      const birthDate = new Date(value);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age >= 5 && age <= 120;
+    }),
   contactNumber: yup.string().required("Contact Number is required"),
   favoriteFood: yup
     .array()
@@ -89,9 +102,7 @@ export default function Home() {
     }
   };
 
-  // For checkboxes
   const favoriteFood = watch("favoriteFood");
-  // For ratings
   const ratings = watch("ratings");
 
   return (
